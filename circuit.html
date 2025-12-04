@@ -3,591 +3,783 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Circuit - Live Social Network</title>
-    
-    <!-- 1. TAILWIND CSS (Styling without build steps) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. LUCIDE ICONS (Visuals) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Circuit | Decentralized Social</title>
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- PeerJS for Real P2P Chat -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
-    <!-- 3. CONFIGURATION -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        slate: { 850: '#151f32', 950: '#020617' },
-                        cyan: { 450: '#00ccff' }
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        /* Custom scrollbar for webkit */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        body { background-color: #000; color: white; overflow: hidden; }
-        .page { display: none; height: 100%; width: 100%; overflow-y: auto; }
-        .page.active { display: block; }
-        .modal { display: none; }
-        .modal.active { display: flex; }
+        :root {
+            --bg-body: #09090b;
+            --bg-card: rgba(24, 24, 27, 0.7);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --accent: #6366f1; /* Indigo */
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --danger: #ef4444;
+            --warning: #eab308;
+            --success: #22c55e;
+            --text-main: #fafafa;
+            --text-muted: #a1a1aa;
+            --border: rgba(255,255,255,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg-body) 60%);
+            min-height: 100vh;
+        }
+
+        /* --- LAYOUT GRID --- */
+        .layout {
+            display: grid;
+            grid-template-columns: 250px 600px 350px;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 20px;
+            padding-top: 20px;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            position: fixed;
+            width: 250px;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo i { color: var(--accent); }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: 0.3s;
+            border-radius: 12px;
+        }
+        .nav-item:hover, .nav-item.active {
+            color: var(--accent);
+            background: var(--bg-glass);
+        }
+
+        /* --- MAIN FEED --- */
+        .main-feed {
+            grid-column: 2;
+            padding-bottom: 100px;
+        }
+
+        /* Create Post Box */
+        .create-post {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .post-input-area {
+            display: flex;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #333, #555);
+            object-fit: cover;
+        }
+
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            resize: none;
+            outline: none;
+            font-size: 1.1rem;
+            min-height: 80px;
+            padding-top: 10px;
+        }
+
+        /* Risk Meter & Tools */
+        .post-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+
+        .risk-wrapper {
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .risk-bar-bg {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .risk-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: 0.5s ease;
+            background: var(--success);
+        }
+
+        .risk-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .toggle-anon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #333;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-anon.active .toggle-switch { background: var(--accent); }
+        .toggle-anon.active .toggle-switch::after { transform: translateX(20px); }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Feed Posts */
+        .post-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .post-info h4 { font-size: 0.95rem; }
+        .post-info span { font-size: 0.8rem; color: var(--text-muted); }
+        .anon-badge {
+            background: #333;
+            color: #aaa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+        .post-content {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+        .post-stats {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        .stat-item {
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stat-item:hover.like { color: #f91880; }
+        .stat-item:hover.comment { color: var(--accent); }
+
+        .comments-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+        .comments-section.open { display: block; }
+        .comment {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* --- RIGHT SIDEBAR (Chat) --- */
+        .right-sidebar {
+            grid-column: 3;
+            padding-top: 20px;
+        }
+        
+        .chat-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .connection-panel {
+            padding: 15px;
+            background: #111;
+            font-size: 0.8rem;
+        }
+        .connection-panel input {
+            width: 100%;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+        .msg-me { align-self: flex-end; background: var(--accent); color: white; }
+        .msg-them { align-self: flex-start; background: #333; color: #ddd; }
+
+        .chat-input-box {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .chat-input-box input {
+            flex: 1;
+            background: #222;
+            border: none;
+            padding: 8px;
+            border-radius: 20px;
+            color: white;
+            outline: none;
+        }
+
+        /* --- LOGIN MODAL --- */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-box {
+            background: #18181b;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+            width: 400px;
+        }
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            color: white;
+            margin: 20px 0;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 1000px) {
+            .layout { grid-template-columns: 80px 1fr; }
+            .sidebar { width: 80px; }
+            .nav-text, .logo span { display: none; }
+            .right-sidebar { display: none; } /* Hide chat on tablet initially */
+        }
     </style>
 </head>
-<body class="flex justify-center h-screen w-screen bg-black">
+<body>
 
-    <!-- APP CONTAINER -->
-    <div id="app-container" class="w-full max-w-md bg-slate-950 h-full relative border-x border-slate-800 shadow-2xl flex flex-col">
-
-        <!-- === LOADING SCREEN === -->
-        <div id="loading-screen" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center">
-            <i data-lucide="zap" class="w-16 h-16 text-cyan-400 mb-4 animate-pulse"></i>
-            <h1 class="text-3xl font-black text-white italic tracking-tighter">CIRCUIT</h1>
-            <p id="loading-text" class="text-slate-500 text-sm mt-2">Connecting to secure server...</p>
+    <!-- LOGIN SCREEN -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h1 style="color:var(--accent); margin-bottom: 10px;">CIRCUIT</h1>
+            <p style="color:var(--text-muted)">Enter the grid.</p>
+            <input type="text" id="username-input" class="login-input" placeholder="Choose your Handle">
+            <button class="btn-primary" style="width:100%" onclick="login()">Enter System</button>
         </div>
+    </div>
 
-        <!-- === PROFILE SETUP (LOGIN) === -->
-        <div id="auth-screen" class="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-6 hidden">
-            <div class="w-16 h-16 bg-gradient-to-tr from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(6,182,212,0.5)]">
-                <i data-lucide="zap" class="text-white w-8 h-8"></i>
+    <div class="layout">
+        
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-microchip"></i>
+                <span>CIRCUIT</span>
             </div>
-            <h2 class="text-2xl font-bold mb-2">Identify Yourself</h2>
-            <p class="text-slate-400 mb-6 text-center">Choose a handle to enter the Circuit.</p>
-            <input type="text" id="username-input" placeholder="@username" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white mb-4 text-center font-bold focus:outline-none focus:border-cyan-500">
-            <button onclick="handleLogin()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition-all active:scale-95">Jack In</button>
-        </div>
+            <div class="nav-item active">
+                <i class="fa-solid fa-house"></i>
+                <span class="nav-text">Feed</span>
+            </div>
+            <div class="nav-item">
+                <i class="fa-solid fa-hashtag"></i>
+                <span class="nav-text">Explore</span>
+            </div>
+            <div class="nav-item">
+                <i class="fa-solid fa-bell"></i>
+                <span class="nav-text">Alerts</span>
+            </div>
+            <div class="nav-item" onclick="toggleChatPanel()">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="nav-text">Messages</span>
+            </div>
+            <div class="nav-item" style="margin-top: auto;">
+                <i class="fa-solid fa-user"></i>
+                <span id="sidebar-username" class="nav-text">Profile</span>
+            </div>
+        </nav>
 
-        <!-- === MAIN APP HEADER === -->
-        <header id="main-header" class="hidden h-14 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 z-20 absolute top-0 w-full">
-            <div class="flex items-center gap-2">
-                <i data-lucide="zap" class="text-cyan-400 w-5 h-5"></i>
-                <span class="font-black italic tracking-tighter text-xl">CIRCUIT</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div id="header-avatar" class="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-700"></div>
-            </div>
-        </header>
-
-        <!-- === PAGES === -->
-        <main id="main-content" class="flex-1 overflow-hidden relative mt-14 mb-16 hidden">
+        <!-- MAIN FEED -->
+        <main class="main-feed">
             
-            <!-- 1. FEED PAGE -->
-            <div id="page-feed" class="page active no-scrollbar p-4 space-y-4 pb-20">
-                <!-- Posts injected here -->
-                <div class="text-center text-slate-500 mt-10">Loading Pulse...</div>
-            </div>
-
-            <!-- 2. REELS PAGE -->
-            <div id="page-reels" class="page no-scrollbar bg-black h-full snap-y snap-mandatory">
-                <!-- Reels injected here -->
-            </div>
-
-            <!-- 3. CHAT PAGE -->
-            <div id="page-chat" class="page flex flex-col h-full bg-slate-950">
-                <div class="p-3 bg-slate-900 border-b border-slate-800 flex justify-between items-center shadow-md z-10">
-                    <h2 class="text-white font-bold flex items-center gap-2 text-sm">
-                        <i data-lucide="hash" class="w-4 h-4 text-cyan-500"></i> Public Circuit
-                    </h2>
-                    <div class="flex items-center gap-1 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded text-[10px] text-green-400">
-                        <i data-lucide="lock" class="w-3 h-3"></i> <span>E2E ENCRYPTED</span>
+            <!-- Post Creator -->
+            <div class="create-post">
+                <div class="post-input-area">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="avatar" id="my-avatar">
+                    <textarea id="post-text" placeholder="What's happening in the grid?"></textarea>
+                </div>
+                
+                <div class="post-tools">
+                    <div class="risk-wrapper">
+                        <div class="risk-text">
+                            <span id="risk-status">AI Risk Meter: Idle</span>
+                            <span id="risk-score">0%</span>
+                        </div>
+                        <div class="risk-bar-bg">
+                            <div class="risk-bar-fill" id="risk-fill"></div>
+                        </div>
                     </div>
+
+                    <div class="toggle-anon" id="anon-toggle" onclick="toggleAnon()">
+                        <div class="toggle-switch"></div>
+                        <span>Incognito</span>
+                    </div>
+
+                    <button class="btn-primary" id="btn-post" onclick="createPost()">POST</button>
                 </div>
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-20">
-                    <!-- Chat messages -->
-                </div>
-                <div class="p-3 bg-slate-900 border-t border-slate-800 flex gap-2 absolute bottom-0 w-full">
-                    <input id="chat-input" type="text" class="flex-1 bg-black border border-slate-700 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500" placeholder="Type encrypted message...">
-                    <button onclick="sendChatMessage()" class="w-10 h-10 flex items-center justify-center bg-cyan-500 rounded-full text-black hover:bg-cyan-400">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                    </button>
-                </div>
+            </div>
+
+            <!-- Feed Stream -->
+            <div id="feed-stream">
+                <!-- Posts will be injected here via JS -->
             </div>
         </main>
 
-        <!-- === FAB (CREATE POST) === -->
-        <button onclick="toggleCreateModal(true)" id="fab-btn" class="hidden absolute bottom-20 right-4 z-30 w-14 h-14 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center text-white hover:scale-110 transition-transform">
-            <i data-lucide="plus" class="w-8 h-8"></i>
-        </button>
-
-        <!-- === BOTTOM NAV === -->
-        <nav id="bottom-nav" class="hidden h-16 bg-black border-t border-slate-900 grid grid-cols-4 items-center px-2 z-30 absolute bottom-0 w-full">
-            <button onclick="switchTab('feed')" class="nav-btn active flex flex-col items-center justify-center h-full text-cyan-400" data-tab="feed">
-                <i data-lucide="home" class="w-6 h-6"></i>
-            </button>
-            <button onclick="switchTab('reels')" class="nav-btn flex flex-col items-center justify-center h-full text-slate-600 hover:text-slate-400" data-tab="reels">
-                <i data-lucide="film" class="w-6 h-6"></i>
-            </button>
-            <button onclick="switchTab('chat')" class="nav-btn flex flex-col items-center justify-center h-full text-slate-600 hover:text-slate-400" data-tab="chat">
-                <i data-lucide="message-circle" class="w-6 h-6"></i>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center h-full text-slate-600 hover:text-slate-400">
-                <i data-lucide="user" class="w-6 h-6"></i>
-            </button>
-        </nav>
-
-        <!-- === MODAL: CREATE POST === -->
-        <div id="create-modal" class="modal fixed inset-0 z-50 bg-black/90 backdrop-blur-sm items-end sm:items-center justify-center animate-fade-in">
-            <div class="bg-slate-900 w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-700 p-4 relative">
-                <div class="flex justify-between items-center mb-4">
-                    <button onclick="toggleCreateModal(false)" class="text-slate-400">Cancel</button>
-                    <span class="font-bold text-white">New Pulse</span>
-                    <button onclick="submitPost()" class="text-cyan-400 font-bold">Post</button>
+        <!-- RIGHT SIDEBAR (CHAT) -->
+        <aside class="right-sidebar">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h4><i class="fa-solid fa-lock"></i> Encrypted P2P Link</h4>
                 </div>
                 
-                <textarea id="post-text" oninput="updateRiskMeter()" class="w-full bg-transparent text-white resize-none outline-none text-lg h-32 placeholder:text-slate-600" placeholder="What is happening on the circuit?"></textarea>
-                
-                <!-- AI Tools -->
-                <div class="flex gap-2 mb-3">
-                    <button onclick="aiPolishPost()" id="btn-polish" class="flex items-center gap-1 text-xs px-3 py-1 bg-indigo-900/50 text-indigo-300 rounded-full border border-indigo-500/50 hover:bg-indigo-900">
-                        <i data-lucide="sparkles" class="w-3 h-3"></i> Polish
-                    </button>
-                    <button onclick="aiSuggestTags()" id="btn-tags" class="flex items-center gap-1 text-xs px-3 py-1 bg-emerald-900/50 text-emerald-300 rounded-full border border-emerald-500/50 hover:bg-emerald-900">
-                        <i data-lucide="hash" class="w-3 h-3"></i> Tags
-                    </button>
-                </div>
-                <div id="suggested-tags-container" class="mb-3 hidden text-xs text-cyan-400 flex-wrap gap-2"></div>
-
-                <!-- Risk Meter -->
-                <div id="risk-container" class="w-full mt-2 p-3 bg-slate-950 rounded-lg border border-slate-800 hidden">
-                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
-                        <span class="text-slate-400">Safety Audit</span>
-                        <span id="risk-label" class="text-emerald-500">Safe (0%)</span>
+                <div class="connection-panel">
+                    <div>Your ID: <span id="my-peer-id" style="color:var(--accent); cursor:pointer;">Loading...</span></div>
+                    <div style="margin-top:10px; font-size: 0.7rem; color:#888;">Send this ID to your friend.</div>
+                    
+                    <div style="border-top:1px solid #333; margin-top:10px; padding-top:10px;">
+                        <input type="text" id="remote-peer-id" placeholder="Enter Friend's ID here...">
+                        <button class="btn-primary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="connectToPeer()">Connect</button>
                     </div>
-                    <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div id="risk-bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                    <div id="conn-status" style="color: var(--success); margin-top: 5px; font-size: 0.8rem;"></div>
+                </div>
+
+                <div class="chat-messages" id="chat-box">
+                    <div style="text-align:center; color:#555; font-size:0.8rem; margin-top:20px;">
+                        Wait for connection to start chatting.
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
-                    <div class="flex gap-4 text-cyan-500">
-                        <i data-lucide="camera" class="w-5 h-5 cursor-pointer"></i>
-                        <label class="flex items-center gap-2 cursor-pointer text-violet-400">
-                            <input type="checkbox" id="anon-check" class="hidden">
-                            <i data-lucide="ghost" class="w-5 h-5"></i>
-                        </label>
-                    </div>
+                <div class="chat-input-box">
+                    <input type="text" id="chat-input" placeholder="Secure message...">
+                    <button class="btn-primary" style="border-radius:50%; width:35px; height:35px; padding:0; display:flex; align-items:center; justify-content:center;" onclick="sendP2PMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
-        </div>
-
-        <!-- === MODAL: WELLNESS CHECK === -->
-        <div id="wellness-modal" class="modal fixed inset-0 z-[60] bg-black/90 backdrop-blur-md items-center justify-center p-6">
-            <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center">
-                <i data-lucide="activity" class="w-12 h-12 text-cyan-500 mx-auto mb-4"></i>
-                <h2 class="text-2xl font-bold text-white mb-2">System Overload?</h2>
-                <p class="text-slate-400 mb-6">You've been scrolling for a while. Take a breath.</p>
-                <div class="grid grid-cols-3 gap-3 mb-6">
-                    <button onclick="closeWellness()" class="p-3 bg-slate-800 rounded-lg hover:bg-green-900/50 text-green-400 text-xs">Good</button>
-                    <button onclick="closeWellness()" class="p-3 bg-slate-800 rounded-lg hover:bg-yellow-900/50 text-yellow-400 text-xs">Okay</button>
-                    <button onclick="closeWellness()" class="p-3 bg-slate-800 rounded-lg hover:bg-rose-900/50 text-rose-400 text-xs">Bad</button>
-                </div>
-            </div>
-        </div>
+        </aside>
 
     </div>
 
-    <!-- === SCRIPTS === -->
-    <script type="module">
-        // --- 1. FIREBASE SETUP ---
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, where } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+    <script>
+        // --- 1. CONFIGURATION ---
+        // !!! IMPORTANT: Get a key from https://aistudio.google.com/app/apikey for real AI !!!
+        const GEMINI_API_KEY = "AIzaSyCfR3Ir8kWPvXiaWO4_Mmtow1OlItj8yWE"; // Paste your key inside the quotes. Example: "AIzaSy..."
+        
+        let currentUser = {
+            name: "User",
+            handle: "@user",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+            isIncognito: false
+        };
 
-        // Globals provided by environment or placeholders
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const apiKey = ""; // Gemini API Key
-
-        let currentUser = null;
-
-        // --- 2. AUTHENTICATION LOGIC ---
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (e) {
-                console.error("Auth error:", e);
-                // Fallback
-                await signInAnonymously(auth);
+        const toxicWords = ['hate', 'stupid', 'kill', 'attack', 'idiot', 'scam']; // Fallback if API key missing
+        
+        // --- 2. LOGIN SYSTEM ---
+        function login() {
+            const input = document.getElementById('username-input').value;
+            if(input.trim().length > 0) {
+                currentUser.name = input;
+                currentUser.handle = "@" + input.toLowerCase().replace(/\s/g, '');
+                currentUser.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${input}`;
+                
+                document.getElementById('sidebar-username').innerText = currentUser.name;
+                document.getElementById('my-avatar').src = currentUser.avatar;
+                document.getElementById('login-overlay').style.display = 'none';
+                
+                // Initialize Fake Feed
+                generateFakePosts();
             }
         }
 
-        onAuthStateChanged(auth, (user) => {
-            document.getElementById('loading-screen').classList.add('hidden');
-            if (user) {
-                currentUser = user;
-                if (user.displayName) {
-                    showApp();
-                } else {
-                    document.getElementById('auth-screen').classList.remove('hidden');
-                    document.getElementById('auth-screen').classList.add('flex');
+        // --- 3. POST & FEED SYSTEM ---
+        function toggleAnon() {
+            const toggle = document.getElementById('anon-toggle');
+            toggle.classList.toggle('active');
+            currentUser.isIncognito = toggle.classList.contains('active');
+            
+            const btn = document.getElementById('btn-post');
+            btn.innerText = currentUser.isIncognito ? "POST ANONYMOUSLY" : "POST";
+        }
+
+        async function checkRisk(text) {
+            // Real AI Integration with Fallback
+            if(GEMINI_API_KEY.length > 10) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AIzaSyCfR3Ir8kWPvXiaWO4_Mmtow1OlItj8yWE}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{text: `Analyze the toxicity of this social media post on a scale of 0 to 100. Return ONLY the number. Post: "${text}"`}]
+                            }]
+                        })
+                    });
+                    const data = await response.json();
+                    const score = parseInt(data.candidates[0].content.parts[0].text);
+                    return isNaN(score) ? 0 : score;
+                } catch(e) {
+                    console.error("Gemini Error:", e);
+                    return simpleCheck(text); // Fallback
                 }
             } else {
-                // Wait for auth...
+                return simpleCheck(text); // Fallback if no key
             }
-        });
-
-        window.handleLogin = async () => {
-            const username = document.getElementById('username-input').value;
-            if (!username) return;
-            try {
-                await updateProfile(currentUser, {
-                    displayName: username,
-                    photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
-                });
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('auth-screen').classList.remove('flex');
-                showApp();
-            } catch (e) {
-                alert("Login Error: " + e.message);
-            }
-        };
-
-        function showApp() {
-            document.getElementById('main-header').classList.remove('hidden');
-            document.getElementById('main-header').classList.add('flex');
-            document.getElementById('main-content').classList.remove('hidden');
-            document.getElementById('bottom-nav').classList.remove('hidden');
-            document.getElementById('bottom-nav').classList.add('grid');
-            document.getElementById('fab-btn').classList.remove('hidden');
-            document.getElementById('fab-btn').classList.add('flex');
-            
-            // Set Avatar
-            document.getElementById('header-avatar').innerHTML = `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">`;
-            
-            // Start Listeners
-            initFeed();
-            initReels();
-            initChat();
-            startDoomscrollTimer();
         }
 
-        // --- 3. UI LOGIC ---
-        window.switchTab = (tabName) => {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById(`page-${tabName}`).classList.add('active');
-            
-            // Update Nav Icons
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                if (el.dataset.tab === tabName) {
-                    el.classList.add('text-cyan-400');
-                    el.classList.remove('text-slate-600');
-                } else {
-                    el.classList.remove('text-cyan-400');
-                    el.classList.add('text-slate-600');
-                }
-            });
-            lucide.createIcons();
-        };
-
-        window.toggleCreateModal = (show) => {
-            const el = document.getElementById('create-modal');
-            if(show) { el.classList.add('active'); } 
-            else { el.classList.remove('active'); }
-        };
-
-        // --- 4. DATA LOGIC (POSTS) ---
-        function initFeed() {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('page-feed');
-                container.innerHTML = '';
-                
-                if (snapshot.empty) {
-                    container.innerHTML = '<div class="text-center text-slate-500 mt-10">No signals found.</div>';
-                    return;
-                }
-
-                snapshot.forEach(docSnap => {
-                    const post = docSnap.data();
-                    const isLiked = post.likes && post.likes.includes(currentUser.uid);
-                    
-                    const postEl = document.createElement('div');
-                    postEl.className = "bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm";
-                    postEl.innerHTML = `
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center ${post.isAnonymous ? 'bg-violet-900/30 border border-violet-500/50' : 'bg-slate-800 overflow-hidden'}">
-                                ${post.isAnonymous 
-                                    ? '<i data-lucide="ghost" class="w-5 h-5 text-violet-400"></i>' 
-                                    : `<img src="${post.authorAvatar}" class="w-full h-full">`}
-                            </div>
-                            <div>
-                                <div class="font-bold text-sm ${post.isAnonymous ? 'text-violet-400' : 'text-white'}">
-                                    ${post.isAnonymous ? 'Ghost User' : post.authorName}
-                                </div>
-                                <div class="text-xs text-slate-500">Just now • ${post.visibility}</div>
-                            </div>
-                        </div>
-                        <p class="text-slate-200 text-sm mb-3 whitespace-pre-wrap">${post.text}</p>
-                        ${post.riskScore > 70 ? `
-                            <div class="bg-rose-900/20 border border-rose-900/50 p-2 rounded text-xs text-rose-300 flex items-center gap-2 mb-3">
-                                <i data-lucide="alert-triangle" class="w-3 h-3"></i> Toxicity Warning
-                            </div>` : ''
-                        }
-                        <div class="flex items-center gap-6 pt-3 border-t border-slate-800/50">
-                            <button onclick="toggleLike('${docSnap.id}', ${isLiked})" class="flex items-center gap-2 text-sm ${isLiked ? 'text-pink-500' : 'text-slate-500'}">
-                                <i data-lucide="heart" class="w-4 h-4" fill="${isLiked ? 'currentColor' : 'none'}"></i>
-                                <span>${post.likes ? post.likes.length : 0}</span>
-                            </button>
-                            <button class="flex items-center gap-2 text-sm text-slate-500">
-                                <i data-lucide="message-circle" class="w-4 h-4"></i> Comment
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(postEl);
-                });
-                lucide.createIcons();
-            });
-        }
-
-        window.submitPost = async () => {
-            const text = document.getElementById('post-text').value;
-            const isAnon = document.getElementById('anon-check').checked;
-            const risk = calculateRisk(text);
-
-            if (!text) return;
-            if (risk > 80) { alert("Post blocked by safety protocol (High Risk)"); return; }
-
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts'), {
-                text,
-                authorName: currentUser.displayName,
-                authorAvatar: currentUser.photoURL,
-                authorUid: currentUser.uid,
-                createdAt: serverTimestamp(),
-                likes: [],
-                isAnonymous: isAnon,
-                riskScore: risk,
-                visibility: 'public'
-            });
-
-            document.getElementById('post-text').value = '';
-            toggleCreateModal(false);
-        };
-
-        window.toggleLike = async (postId, isLiked) => {
-            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
-            if (isLiked) {
-                await updateDoc(ref, { likes: arrayRemove(currentUser.uid) });
-            } else {
-                await updateDoc(ref, { likes: arrayUnion(currentUser.uid) });
-            }
-        };
-
-        // --- 5. CHAT SYSTEM ---
-        function initChat() {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('chat-messages');
-                container.innerHTML = '';
-                const messages = [];
-                snapshot.forEach(d => messages.push({id: d.id, ...d.data()}));
-                
-                messages.reverse().forEach(msg => {
-                    const isMe = msg.uid === currentUser.uid;
-                    const el = document.createElement('div');
-                    el.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
-                    el.innerHTML = `
-                        <div class="max-w-[80%]">
-                            ${!isMe ? `<p class="text-[10px] text-slate-500 mb-1 ml-2">${msg.name}</p>` : ''}
-                            <div class="px-4 py-2 rounded-2xl text-sm flex items-center gap-2 ${isMe ? 'bg-cyan-600 text-white rounded-br-sm' : 'bg-slate-800 text-slate-200 rounded-bl-sm'}">
-                                <span>${msg.text}</span>
-                                <button onclick="speakText('${msg.text.replace(/'/g, "\\'")}')" class="ml-2 opacity-50 hover:opacity-100"><i data-lucide="volume-2" class="w-3 h-3"></i></button>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(el);
-                });
-                lucide.createIcons();
-                container.scrollTop = container.scrollHeight;
-            });
-        }
-
-        window.sendChatMessage = async () => {
-            const input = document.getElementById('chat-input');
-            const text = input.value;
-            if(!text) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
-                text,
-                uid: currentUser.uid,
-                name: currentUser.displayName,
-                createdAt: serverTimestamp()
-            });
-            input.value = '';
-        };
-
-        // --- 6. REELS (MOCK) ---
-        function initReels() {
-            const container = document.getElementById('page-reels');
-            const videos = [
-                'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-                'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
-            ];
-            
-            videos.forEach((url, i) => {
-                const el = document.createElement('div');
-                el.className = "h-full w-full snap-start relative bg-slate-900 flex items-center justify-center";
-                el.innerHTML = `
-                    <video src="${url}" class="h-full w-full object-cover opacity-80" loop muted autoplay playsinline></video>
-                    <div class="absolute bottom-20 left-4 text-white">
-                        <h3 class="font-bold shadow-black drop-shadow-md">@ReelStar${i+1}</h3>
-                        <p class="text-sm opacity-90">Living the life #circuit #vibes</p>
-                    </div>
-                `;
-                container.appendChild(el);
-            });
-        }
-
-        // --- 7. GEMINI AI FEATURES ---
-        async function fetchGemini(prompt, systemPrompt = "") {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const body = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
-            const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            const data = await res.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text;
-        }
-
-        window.aiPolishPost = async () => {
-            const input = document.getElementById('post-text');
-            const oldText = input.value;
-            if (!oldText) return;
-            
-            const btn = document.getElementById('btn-polish');
-            btn.innerHTML = 'Thinking...';
-            
-            const polished = await fetchGemini(`Rewrite this social post to be more engaging and concise: "${oldText}"`, "You are a social media editor.");
-            if (polished) input.value = polished.trim();
-            
-            btn.innerHTML = '<i data-lucide="sparkles" class="w-3 h-3"></i> Polish';
-            lucide.createIcons();
-        };
-
-        window.aiSuggestTags = async () => {
-            const text = document.getElementById('post-text').value;
-            if(!text) return;
-            
-            const btn = document.getElementById('btn-tags');
-            btn.innerHTML = 'Thinking...';
-
-            // Hacky JSON parsing for demo
-            const raw = await fetchGemini(`Give me 5 hashtags for this post. Return ONLY a JSON list of strings like ["tag1", "tag2"]. Post: "${text}"`, "Output raw JSON only.");
-            try {
-                const tags = JSON.parse(raw.replace(/```json/g, '').replace(/```/g, ''));
-                const container = document.getElementById('suggested-tags-container');
-                container.innerHTML = tags.map(t => `<span class="bg-slate-800 px-2 py-1 rounded-md">#${t}</span>`).join('');
-                container.classList.remove('hidden');
-                container.classList.add('flex');
-            } catch(e) { console.error(e); }
-
-            btn.innerHTML = '<i data-lucide="hash" class="w-3 h-3"></i> Tags';
-            lucide.createIcons();
-        };
-
-        window.speakText = async (text) => {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-            const body = { 
-                contents: [{ parts: [{ text }] }], 
-                generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } },
-                model: "gemini-2.5-flash-preview-tts"
-            };
-            
-            try {
-                const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-                const data = await res.json();
-                const audioData = data.candidates[0].content.parts[0].inlineData.data;
-                
-                // Decode Base64 to ArrayBuffer
-                const binaryString = atob(audioData);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-                
-                // Create minimal WAV header for PCM 24kHz
-                const wavHeader = new Uint8Array(44);
-                const view = new DataView(wavHeader.buffer);
-                // (Simplified WAV header construction for brevity - assumes 24k mono)
-                // In a real app, you'd build the full RIFF header properly. 
-                // For this demo, we can often just feed raw PCM if the browser supports it or use a library, 
-                // but direct raw PCM playback is tricky. 
-                // Let's assume browser can handle the blob if we hint it right or use a workaround.
-                // Actually, simplest is creating a basic WAV blob wrapper.
-                
-                const blob = new Blob([bytes], { type: 'audio/pcm' }); 
-                // Note: Playing raw PCM in generic <audio> is hard. 
-                // A reliable fallback without large libraries is hard in 1 file. 
-                // For now, I will alert for the demo as raw PCM handling requires ~50 lines of code.
-                console.log("Audio generated. (PCM playback requires AudioContext setup)");
-                // *Implemented basic AudioContext playback*
-                const ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 24000});
-                const audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0)); // Copy buffer
-                const source = ctx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(ctx.destination);
-                source.start(0);
-
-            } catch(e) { console.error(e); }
-        };
-
-        // --- 8. UTILS ---
-        function calculateRisk(text) {
-            const words = ['hate', 'kill', 'stupid', 'die'];
+        function simpleCheck(text) {
             let score = 0;
-            words.forEach(w => { if(text.toLowerCase().includes(w)) score += 25; });
+            text = text.toLowerCase();
+            toxicWords.forEach(word => { if(text.includes(word)) score += 30; });
             return Math.min(score, 100);
         }
 
-        window.updateRiskMeter = () => {
-            const text = document.getElementById('post-text').value;
-            const score = calculateRisk(text);
-            const bar = document.getElementById('risk-bar');
-            const label = document.getElementById('risk-label');
-            const container = document.getElementById('risk-container');
-            
-            if(text.length > 0) {
-                container.classList.remove('hidden');
-                bar.style.width = `${score}%`;
-                if(score > 50) {
-                    bar.className = "h-full bg-rose-500 transition-all duration-500";
-                    label.innerText = `Toxic (${score}%)`;
-                    label.className = "text-rose-500";
-                } else {
-                    bar.className = "h-full bg-emerald-500 transition-all duration-500";
-                    label.innerText = `Safe (${score}%)`;
-                    label.className = "text-emerald-500";
-                }
-            } else {
-                container.classList.add('hidden');
-            }
-        };
+        // Debounce for typing
+        let timeout = null;
+        document.getElementById('post-text').addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(async () => {
+                const text = this.value;
+                if(!text) return;
+                
+                document.getElementById('risk-status').innerText = "Analyzing...";
+                const score = await checkRisk(text);
+                updateRiskUI(score);
+            }, 600);
+        });
 
-        function startDoomscrollTimer() {
-            let seconds = 0;
-            setInterval(() => {
-                seconds++;
-                if (seconds > 60) { // 60s trigger
-                    document.getElementById('wellness-modal').classList.add('active');
-                    seconds = 0;
-                }
-            }, 1000);
+        function updateRiskUI(score) {
+            const bar = document.getElementById('risk-fill');
+            const scoreTxt = document.getElementById('risk-score');
+            const status = document.getElementById('risk-status');
+            const btn = document.getElementById('btn-post');
+
+            bar.style.width = score + "%";
+            scoreTxt.innerText = score + "%";
+
+            if(score < 30) {
+                bar.style.background = "var(--success)";
+                status.innerText = "Risk: Safe";
+                btn.disabled = false;
+            } else if (score < 70) {
+                bar.style.background = "var(--warning)";
+                status.innerText = "Risk: Moderate";
+                btn.disabled = false;
+            } else {
+                bar.style.background = "var(--danger)";
+                status.innerText = "Risk: DANGEROUS";
+                btn.disabled = true; // Block posting
+            }
         }
 
-        window.closeWellness = () => {
-            document.getElementById('wellness-modal').classList.remove('active');
-        };
+        function createPost() {
+            const text = document.getElementById('post-text').value;
+            if(!text) return;
 
-        // --- INIT ---
-        initAuth();
-        lucide.createIcons();
+            const postData = {
+                name: currentUser.isIncognito ? "Anonymous" : currentUser.name,
+                handle: currentUser.isIncognito ? "#" + Math.random().toString(16).substr(2,6) : currentUser.handle,
+                avatar: currentUser.isIncognito ? "https://api.dicebear.com/7.x/identicon/svg?seed=" + Math.random() : currentUser.avatar,
+                content: text,
+                time: "Just now",
+                likes: 0,
+                comments: [],
+                risk: parseInt(document.getElementById('risk-score').innerText)
+            };
+
+            addPostToFeed(postData, true);
+            document.getElementById('post-text').value = "";
+            updateRiskUI(0);
+        }
+
+        function addPostToFeed(data, prepend = false) {
+            const feed = document.getElementById('feed-stream');
+            const div = document.createElement('div');
+            div.className = 'post-card';
+            
+            // Generate unique ID for comment toggling
+            const postId = 'post-' + Math.floor(Math.random() * 100000);
+
+            let badge = data.risk > 0 ? `<span class="anon-badge" style="color:${data.risk > 50 ? 'red' : 'orange'}">Risk: ${data.risk}%</span>` : '';
+
+            div.innerHTML = `
+                <div class="post-header">
+                    <img src="${data.avatar}" class="avatar">
+                    <div class="post-info">
+                        <h4>${data.name} ${data.name === 'Anonymous' ? '<span class="anon-badge">INC</span>' : ''}</h4>
+                        <span>${data.handle} • ${data.time} ${badge}</span>
+                    </div>
+                </div>
+                <div class="post-content">${data.content}</div>
+                <div class="post-stats">
+                    <div class="stat-item like" onclick="likePost(this)">
+                        <i class="fa-regular fa-heart"></i> <span>${data.likes}</span>
+                    </div>
+                    <div class="stat-item comment" onclick="toggleComments('${postId}')">
+                        <i class="fa-regular fa-comment"></i> <span>${data.comments.length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </div>
+                </div>
+                
+                <!-- Comments Section -->
+                <div class="comments-section" id="${postId}">
+                    <div class="comment-input" style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="text" placeholder="Reply..." style="flex:1; background:#222; border:none; padding:5px; color:white; border-radius:4px;" onkeydown="addComment(event, this)">
+                    </div>
+                    <div class="comments-list">
+                        ${data.comments.map(c => `
+                            <div class="comment">
+                                <strong>${c.user}:</strong> <span>${c.text}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            if(prepend) feed.prepend(div);
+            else feed.appendChild(div);
+        }
+
+        // --- 4. INTERACTIONS (Mock) ---
+        function likePost(el) {
+            const icon = el.querySelector('i');
+            const count = el.querySelector('span');
+            
+            if(icon.classList.contains('fa-regular')) {
+                icon.classList.remove('fa-regular');
+                icon.classList.add('fa-solid');
+                count.innerText = parseInt(count.innerText) + 1;
+            } else {
+                icon.classList.remove('fa-solid');
+                icon.classList.add('fa-regular');
+                count.innerText = parseInt(count.innerText) - 1;
+            }
+        }
+
+        function toggleComments(id) {
+            const section = document.getElementById(id);
+            section.classList.toggle('open');
+        }
+
+        function addComment(e, input) {
+            if(e.key === 'Enter' && input.value) {
+                const list = input.parentElement.nextElementSibling;
+                const div = document.createElement('div');
+                div.className = 'comment';
+                div.innerHTML = `<strong>${currentUser.name}:</strong> <span>${input.value}</span>`;
+                list.prepend(div);
+                input.value = '';
+                
+                // Update counter
+                const countSpan = input.closest('.post-card').querySelectorAll('.stat-item span')[1];
+                countSpan.innerText = parseInt(countSpan.innerText) + 1;
+            }
+        }
+
+        function generateFakePosts() {
+            const fakes = [
+                { name: "Sarah Connor", handle: "@sarah_c", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", content: "The AI moderation on this app is actually kind of scary. It knows when I'm angry before I do.", time: "2h ago", likes: 45, comments: [{user: "John", text: "True that."}], risk: 10 },
+                { name: "Anonymous", handle: "#8f3a21", avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=8f3a21", content: "Just saw the new Cyberpunk update. It's glitchy but beautiful. Just like this world.", time: "4h ago", likes: 120, comments: [], risk: 0 },
+                { name: "Crypto King", handle: "@btc_lord", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=King", content: "Market is crashing! Everyone panic sell now! This is the end!", time: "5h ago", likes: 12, comments: [{user: "Bot", text: "Risk detected."}], risk: 85 }
+            ];
+            fakes.forEach(p => addPostToFeed(p));
+        }
+
+        // --- 5. REAL P2P CHAT (PeerJS) ---
+        // This creates a direct connection between browsers
+        
+        let peer = null;
+        let conn = null;
+
+        // Initialize Peer
+        setTimeout(() => {
+            peer = new Peer(null, {
+                debug: 2
+            });
+
+            peer.on('open', function(id) {
+                document.getElementById('my-peer-id').innerText = id;
+            });
+
+            peer.on('connection', function(c) {
+                // When someone connects to ME
+                conn = c;
+                setupConnection();
+            });
+        }, 1000);
+
+        function connectToPeer() {
+            const remoteId = document.getElementById('remote-peer-id').value;
+            if(!remoteId) return alert("Enter an ID");
+            
+            // Connect to THEM
+            conn = peer.connect(remoteId);
+            setupConnection();
+        }
+
+        function setupConnection() {
+            document.getElementById('conn-status').innerText = "Connected! Encryption Active.";
+            
+            conn.on('data', function(data) {
+                addMessage(data, 'them');
+            });
+            
+            conn.on('open', function(){
+                document.getElementById('conn-status').innerText = "Link Established.";
+                document.getElementById('chat-box').innerHTML = ""; // Clear waiting msg
+            });
+        }
+
+        function sendP2PMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            
+            if(msg && conn && conn.open) {
+                conn.send(msg); // Send to peer
+                addMessage(msg, 'me'); // Show on my screen
+                input.value = '';
+            } else {
+                alert("Not connected to a friend yet!");
+            }
+        }
+
+        function addMessage(msg, who) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg-bubble msg-${who}`;
+            div.innerText = msg;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
 
     </script>
 </body>
